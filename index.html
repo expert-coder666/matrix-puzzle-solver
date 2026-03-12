@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matrix Puzzle Solver</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-base: #f5f0ff;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-elevated: #f0ebfa;
+  --bg-input: #faf8ff;
+  --border-subtle: rgba(120,80,220,0.08);
+  --border-default: rgba(120,80,220,0.15);
+  --border-focus: #7c5cfc;
+  --text-primary: #2d2640;
+  --text-secondary: #6b6080;
+  --text-muted: #a098b0;
+  --accent: #7c5cfc;
+  --accent-light: #9b82ff;
+  --accent-glow: rgba(124,92,252,0.2);
+  --pink: #ff6b9d;
+  --orange: #ff9a56;
+  --teal: #2dd4a8;
+  --sky: #38bdf8;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --shadow-card: 0 2px 12px rgba(124,92,252,0.06), 0 0 0 1px var(--border-subtle);
+  --shadow-elevated: 0 8px 30px rgba(124,92,252,0.1), 0 0 0 1px rgba(124,92,252,0.12);
+  --font-sans: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: '';
+  position: fixed; top: -200px; left: -100px; width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(124,92,252,0.15) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed; bottom: -200px; right: -100px; width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(255,107,157,0.12) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 36px 24px; position: relative; z-index: 1; }
+
+/* ===== Header ===== */
+.header { text-align: center; margin-bottom: 40px; }
+.header h1 {
+  font-size: 36px; font-weight: 700; letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #7c5cfc 0%, #ff6b9d 50%, #ff9a56 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 2px 8px rgba(124,92,252,0.15));
+}
+.header .subtitle {
+  font-size: 15px; color: var(--text-muted); margin-top: 8px; font-weight: 400;
+}
+
+/* ===== Card ===== */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--transition), transform var(--transition);
+  animation: fadeUp 0.45s ease both;
+}
+.card:hover { box-shadow: var(--shadow-elevated); transform: translateY(-2px); }
+.card-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+}
+.card-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.card-icon.purple { background: linear-gradient(135deg, #ede7ff, #d8ccff); color: #7c5cfc; }
+.card-icon.teal { background: linear-gradient(135deg, #d1faf0, #b0f5e0); color: #10b981; }
+.card-icon.amber { background: linear-gradient(135deg, #fff3d6, #ffe8b0); color: #f59e0b; }
+.card-icon.pink { background: linear-gradient(135deg, #ffe0ec, #ffc8da); color: #f43f7a; }
+.card-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.hidden { display: none !important; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Textarea ===== */
+.textarea-wrap { position: relative; }
+.textarea-wrap textarea {
+  width: 100%; height: 200px;
+  background: var(--bg-input); color: var(--text-primary);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  font-family: var(--font-mono); font-size: 13px;
+  resize: vertical; line-height: 1.7;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.textarea-wrap textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}
+.textarea-wrap textarea::placeholder { color: var(--text-muted); }
+
+/* ===== Buttons ===== */
+.btn-row { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.btn {
+  padding: 11px 24px; border: none; border-radius: var(--radius-sm);
+  cursor: pointer; font-family: var(--font-sans);
+  font-size: 14px; font-weight: 600;
+  transition: all var(--transition);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:active { transform: scale(0.96); }
+
+.btn-primary {
+  background: linear-gradient(135deg, #7c5cfc, #a78bfa);
+  color: #fff; box-shadow: 0 3px 16px var(--accent-glow);
+}
+.btn-primary:hover { box-shadow: 0 6px 28px rgba(124,92,252,0.3); transform: translateY(-2px); }
+
+.btn-ghost {
+  background: var(--bg-elevated); color: var(--text-secondary);
+  border: 2px solid var(--border-default);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: #f5f0ff; }
+
+.btn-success {
+  background: linear-gradient(135deg, #2dd4a8, #34d399);
+  color: #fff; box-shadow: 0 3px 16px rgba(45,212,168,0.2);
+}
+.btn-success:hover { box-shadow: 0 6px 28px rgba(45,212,168,0.3); transform: translateY(-2px); }
+
+/* ===== Keyboard Shortcut Badge ===== */
+.kbd {
+  display: inline-block; padding: 2px 7px;
+  background: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 5px; font-size: 11px; font-family: var(--font-mono);
+  color: rgba(255,255,255,0.85); margin-left: 6px; vertical-align: middle;
+}
+
+/* ===== Example Pairs ===== */
+.example-pair {
+  display: flex; align-items: center; gap: 24px;
+  padding: 24px; margin-bottom: 18px;
+  background: linear-gradient(135deg, #faf8ff, #f5f0ff);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-subtle);
+  position: relative;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.example-pair:hover { border-color: rgba(124,92,252,0.2); box-shadow: 0 4px 20px rgba(124,92,252,0.06); }
+.example-badge {
+  position: absolute; top: -11px; left: 18px;
+  background: linear-gradient(135deg, #7c5cfc, #a78bfa);
+  color: #fff; padding: 3px 14px; border-radius: 20px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+.matrix-block {
+  display: flex; flex-direction: column; align-items: center;
+}
+.matrix-label {
+  font-size: 12px; color: var(--text-muted); margin-bottom: 8px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+}
+.arrow-wrap {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; flex-shrink: 0;
+  background: linear-gradient(135deg, #ede7ff, #fce7f3);
+  border-radius: 50%;
+}
+.arrow-wrap svg { width: 22px; height: 22px; color: var(--accent); }
+
+/* ===== Matrix Grid ===== */
+.matrix-grid {
+  display: inline-grid; gap: 1px;
+  background: rgba(0,0,0,0.15);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.matrix-cell {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  font-family: var(--font-mono);
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+.matrix-cell.editable { cursor: pointer; }
+.matrix-cell.editable:hover {
+  transform: scale(1.25); z-index: 2;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+}
+.size-tag {
+  font-size: 11px; color: var(--text-muted);
+  text-align: center; margin-top: 8px;
+  font-family: var(--font-mono); font-weight: 500;
+}
+
+/* ===== Analysis ===== */
+.analysis-item {
+  padding: 18px 22px; margin-bottom: 12px;
+  background: linear-gradient(135deg, #faf8ff, #fff5f9);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--accent);
+  transition: all var(--transition);
+}
+.analysis-item:hover { background: linear-gradient(135deg, #f5f0ff, #fff0f5); transform: translateX(4px); }
+.analysis-item .title {
+  font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 6px;
+}
+.analysis-item .desc {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.8;
+}
+.analysis-item .desc strong { color: #f43f7a; font-weight: 700; }
+
+/* ===== Test Section ===== */
+.test-visual {
+  display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap;
+  padding: 24px;
+  background: linear-gradient(135deg, #f5f0ff, #fdf0f5);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-subtle);
+  margin-bottom: 20px;
+}
+
+/* ===== Editor ===== */
+.editor-section {
+  margin-top: 28px; padding-top: 24px;
+  border-top: 2px dashed rgba(124,92,252,0.15);
+}
+.editor-section h3 {
+  font-size: 16px; font-weight: 700; color: var(--text-primary);
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.editor-section h3 .dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: linear-gradient(135deg, #2dd4a8, #38bdf8);
+  display: inline-block;
+  box-shadow: 0 0 8px rgba(45,212,168,0.4);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.2); }
+}
+
+.palette {
+  display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; align-items: center;
+}
+.palette-label {
+  font-size: 12px; color: var(--text-muted); margin-right: 6px; font-weight: 600;
+}
+.palette-cell {
+  width: 32px; height: 32px; border-radius: 9px; cursor: pointer;
+  border: 3px solid transparent;
+  transition: all 0.18s;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  font-family: var(--font-mono);
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+.palette-cell:hover { transform: scale(1.2) translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.palette-cell.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow), 0 4px 12px rgba(0,0,0,0.1);
+  transform: scale(1.2) translateY(-2px);
+}
+
+.editor-controls {
+  display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;
+}
+.editor-controls label {
+  font-size: 13px; color: var(--text-muted); font-weight: 600;
+}
+.editor-controls input[type="number"] {
+  width: 56px; padding: 6px 8px;
+  background: var(--bg-input); color: var(--text-primary);
+  border: 2px solid var(--border-default);
+  border-radius: 8px; font-size: 13px;
+  font-family: var(--font-mono);
+  transition: border-color var(--transition);
+}
+.editor-controls input[type="number"]:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.output-text {
+  width: 100%; min-height: 80px;
+  background: var(--bg-input); color: var(--accent);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-md); padding: 14px 16px;
+  font-family: var(--font-mono); font-size: 13px; font-weight: 500;
+  resize: vertical; line-height: 1.7;
+}
+
+/* ===== Toast ===== */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: linear-gradient(135deg, #7c5cfc, #a78bfa);
+  color: #fff;
+  padding: 14px 26px; border-radius: 50px;
+  font-weight: 600; font-size: 14px;
+  opacity: 0; transform: translateY(12px) scale(0.95);
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none; z-index: 999;
+  box-shadow: 0 6px 24px var(--accent-glow);
+}
+.toast.show { opacity: 1; transform: translateY(0) scale(1); }
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(124,92,252,0.15); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(124,92,252,0.25); }
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .container { padding: 16px; }
+  .example-pair, .test-visual { flex-direction: column; align-items: center; }
+  .arrow-wrap svg { transform: rotate(90deg); }
+  .header h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>Matrix Puzzle Solver</h1>
+    <div class="subtitle">粘贴矩阵题目，自动可视化并分析变换规律</div>
+  </div>
+
+  <!-- Input -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon purple">&#9998;</div>
+      <div class="card-title">题目输入</div>
+    </div>
+    <div class="textarea-wrap">
+      <textarea id="puzzleInput" placeholder="在此粘贴题目文本...&#10;&#10;支持格式：&#10;  &#8226; JSON：{&quot;train&quot;:[{&quot;input&quot;:[[0,1],[2,3]],&quot;output&quot;:[[3,2],[1,0]]}],&quot;test&quot;:[...]}&#10;  &#8226; 标签文本（自动识别 Example / Input / Output / Test）&#10;  &#8226; Python 列表：[[1,2,3],[4,5,6]]&#10;  &#8226; 空格/逗号/无分隔符的数字网格"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="solve()">解析并求解 <span class="kbd">⌘↵</span></button>
+      <button class="btn btn-ghost" onclick="loadSample()">加载示例</button>
+      <button class="btn btn-ghost" onclick="clearAll()">清空</button>
+    </div>
+  </div>
+
+  <!-- Examples -->
+  <div id="examplesSection" class="card hidden">
+    <div class="card-header">
+      <div class="card-icon teal">&#9632;</div>
+      <div class="card-title">示例可视化</div>
+    </div>
+    <div id="examplesContainer"></div>
+  </div>
+
+  <!-- Analysis -->
+  <div id="analysisSection" class="card hidden">
+    <div class="card-header">
+      <div class="card-icon amber">&#9733;</div>
+      <div class="card-title">规律分析</div>
+    </div>
+    <div id="analysisResult"></div>
+  </div>
+
+  <!-- Test & Prediction -->
+  <div id="testSection" class="card hidden">
+    <div class="card-header">
+      <div class="card-icon pink">&#9654;</div>
+      <div class="card-title">测试预测</div>
+    </div>
+    <div id="testContainer"></div>
+
+    <div class="editor-section">
+      <h3><span class="dot"></span>输出编辑器</h3>
+      <div class="palette" id="colorPalette"></div>
+      <div class="editor-controls">
+        <label>行</label>
+        <input type="number" id="editRows" min="1" max="50" value="3" onchange="resizeEditor()">
+        <label>列</label>
+        <input type="number" id="editCols" min="1" max="50" value="3" onchange="resizeEditor()">
+        <button class="btn btn-ghost" onclick="clearEditor()" style="padding:6px 14px;font-size:12px;">清空画布</button>
+        <button class="btn btn-ghost" onclick="fillFromPrediction()" style="padding:6px 14px;font-size:12px;">重置为预测</button>
+      </div>
+      <div id="editorGrid" style="margin-bottom: 16px;"></div>
+      <div class="btn-row">
+        <button class="btn btn-success" onclick="copyResult()">复制矩阵</button>
+        <button class="btn btn-ghost" onclick="copyResultJSON()">复制 JSON</button>
+      </div>
+      <textarea id="outputText" class="output-text" style="margin-top: 14px;" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- SVG Arrow Template (hidden) -->
+<svg style="display:none;">
+  <symbol id="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+    <polyline points="12 5 19 12 12 19"></polyline>
+  </symbol>
+</svg>
+
+<script>
+// ==================== CONSTANTS ====================
+const ARC_COLORS = [
+  '#2d2640', // 0 dark purple-gray
+  '#5b8def', // 1 bright blue
+  '#ff5a7e', // 2 coral pink
+  '#3dd68c', // 3 mint green
+  '#ffc233', // 4 sunny yellow
+  '#a8a3b5', // 5 lavender gray
+  '#d85cef', // 6 vivid purple
+  '#ff8c42', // 7 tangerine
+  '#42d4f4', // 8 sky blue
+  '#c9415b', // 9 rose
+];
+const EXTRA_COLORS = [
+  '#8b5cf6','#4ade80','#fb7185','#fde047','#67e8f9',
+  '#f472b6','#a3e635','#fb923c','#c084fc','#5eead4',
+];
+
+function getColor(val) {
+  val = Math.round(val);
+  if (val >= 0 && val < ARC_COLORS.length) return ARC_COLORS[val];
+  if (val >= ARC_COLORS.length && val < ARC_COLORS.length + EXTRA_COLORS.length)
+    return EXTRA_COLORS[val - ARC_COLORS.length];
+  const h = (val * 137 + 43) % 360;
+  return `hsl(${h}, 65%, 50%)`;
+}
+
+// ==================== STATE ====================
+let parsedData = null;
+let detectedPatterns = [];
+let predictions = [];
+let editorMatrix = [];
+let selectedColor = 0;
+let currentPrediction = null;
+
+// ==================== PARSING ====================
+function solve() {
+  const text = document.getElementById('puzzleInput').value.trim();
+  if (!text) return showToast('请先输入题目文本');
+
+  parsedData = parseInput(text);
+  if (!parsedData || (parsedData.examples.length === 0 && parsedData.tests.length === 0)) {
+    return showToast('无法解析输入，请检查格式');
+  }
+
+  renderExamples();
+  try { analyzeAndPredict(); } catch(e) { console.error('[solve] analyzeAndPredict error:', e); }
+  renderTest();
+}
+
+function parseInput(text) {
+  let result = tryParseJSON(text);
+  if (result) return result;
+  result = parseTextFormat(text);
+  if (result) return result;
+  return null;
+}
+
+function tryParseJSON(text) {
+  try {
+    let jsonStr = text;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) jsonStr = jsonMatch[0];
+    const obj = JSON.parse(jsonStr);
+    if (obj.train || obj.test) {
+      const examples = (obj.train || []).map(e => ({
+        input: ensureMatrix(e.input), output: ensureMatrix(e.output)
+      }));
+      const tests = (obj.test || []).map(e => ({
+        input: ensureMatrix(e.input), output: e.output ? ensureMatrix(e.output) : null
+      }));
+      return { examples, tests };
+    }
+    if (Array.isArray(obj)) {
+      const examples = [], tests = [];
+      for (const item of obj) {
+        if (item.input && item.output) {
+          examples.push({ input: ensureMatrix(item.input), output: ensureMatrix(item.output) });
+        } else if (item.input) {
+          tests.push({ input: ensureMatrix(item.input), output: null });
+        }
+      }
+      if (examples.length > 0 || tests.length > 0) return { examples, tests };
+    }
+  } catch(e) {}
+  return null;
+}
+
+function parseTextFormat(text) {
+  let normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // === Preprocess: convert color names to numbers ===
+  const colorNames = {
+    'black':0,'blue':1,'red':2,'green':3,'yellow':4,'gray':5,'grey':5,
+    'pink':6,'magenta':6,'fuchsia':6,'orange':7,'cyan':8,'azure':8,
+    'brown':9,'maroon':9,'purple':9,'teal':8,'white':0,'crimson':2,
+    'scarlet':2,'lime':3,'olive':3,'navy':1,'indigo':1,'violet':6,
+    'coral':7,'salmon':7,'gold':4,'beige':4
+  };
+  // Replace multi-word color names first
+  normalized = normalized.replace(/\blight\s+blue\b/gi, '8');
+  // Replace single-word color names (skip reserved words)
+  const reserved = new Set(['input','output','example','test','pair','train','demonstration','the','and','or','is','a','an','to','of','for','in','on','at','by','no','not','with','from','each','all','are','was','be','as','it','its','this','that','if','has','have','do','does','did','s','x']);
+  normalized = normalized.replace(/\b([a-zA-Z]+)\b/g, (m) => {
+    const low = m.toLowerCase();
+    if (reserved.has(low)) return m;
+    if (low in colorNames) return String(colorNames[low]);
+    return m;
+  });
+
+  // === Find ALL matrices in the entire text (most reliable approach) ===
+  // ARC paradigm: N examples (input+output pairs) + 1 test input
+  const allMatrices = findAllJsonArrays(normalized);
+  console.log('[parser] findAllJsonArrays found:', allMatrices.length, 'matrices');
+
+  if (allMatrices.length >= 3 && allMatrices.length % 2 === 1) {
+    // Odd number of matrices: pairs + 1 test input
+    const examples = [], tests = [];
+    const pairCount = Math.floor(allMatrices.length / 2);
+    for (let i = 0; i < pairCount; i++) {
+      examples.push({ input: allMatrices[i * 2], output: allMatrices[i * 2 + 1] });
+    }
+    tests.push({ input: allMatrices[allMatrices.length - 1], output: null });
+    console.log('[parser] JSON arrays: ', examples.length, 'examples,', tests.length, 'tests');
+    return { examples, tests };
+  }
+  if (allMatrices.length >= 2 && allMatrices.length % 2 === 0) {
+    const examples = [], tests = [];
+    const pairCount = allMatrices.length / 2;
+    for (let i = 0; i < pairCount; i++) {
+      examples.push({ input: allMatrices[i * 2], output: allMatrices[i * 2 + 1] });
+    }
+    console.log('[parser] JSON arrays (even): ', examples.length, 'examples, 0 tests');
+    return { examples, tests };
+  }
+
+  // === Fallback: use Input/Output markers ===
+  const markerPattern = /(?:^|\n)[ \t]*(?:#{1,3}\s*)?(?:(?:example|示例|pair|test|测试)\s*\d*\s*[-:：]?\s*)?(?:(input|输入)|(output|输出))[ \t]*[:：]?[ \t]*(?:\n|$)/gi;
+  const markers = [];
+  let m;
+  while ((m = markerPattern.exec(normalized)) !== null) {
+    markers.push({ type: m[1] ? 'input' : 'output', index: m.index, end: m.index + m[0].length });
+  }
+  console.log('[parser] Found', markers.length, 'markers:', markers.map(mk => mk.type));
+
+  if (markers.length >= 2) {
+    const segments = [];
+    for (let i = 0; i < markers.length; i++) {
+      const start = markers[i].end;
+      const end = i + 1 < markers.length ? markers[i+1].index : normalized.length;
+      segments.push({ type: markers[i].type, text: normalized.substring(start, end).trim() });
+    }
+
+    const examples = [], tests = [];
+    let pending = null;
+    for (const seg of segments) {
+      if (seg.type === 'input') {
+        if (pending && pending.type === 'input') {
+          tests.push({ input: pending.text, output: null });
+        }
+        pending = seg;
+      } else if (seg.type === 'output') {
+        if (pending && pending.type === 'input') {
+          examples.push({ input: pending.text, output: seg.text });
+          pending = null;
+        }
+      }
+    }
+    if (pending && pending.type === 'input') {
+      tests.push({ input: pending.text, output: null });
+    }
+
+    // ARC paradigm: if no test found, the last output segment likely contains output + test input
+    if (tests.length === 0 && examples.length > 0) {
+      const lastOutputText = examples[examples.length - 1].output;
+      let matricesInLast = findAllJsonArrays(lastOutputText);
+      if (matricesInLast.length >= 2) {
+        examples[examples.length - 1].output = JSON.stringify(matricesInLast[0]);
+        for (let mi = 1; mi < matricesInLast.length; mi++) {
+          tests.push({ input: JSON.stringify(matricesInLast[mi]), output: null });
+        }
+      } else {
+        let blocksInLast = findAllMatrices(lastOutputText);
+        if (blocksInLast.length >= 2) {
+          examples[examples.length - 1].output = JSON.stringify(blocksInLast[0]);
+          for (let mi = 1; mi < blocksInLast.length; mi++) {
+            tests.push({ input: JSON.stringify(blocksInLast[mi]), output: null });
+          }
+        }
+      }
+    }
+
+    const result = { examples: [], tests: [] };
+    for (const ex of examples) {
+      const inM = extractMatrix(ex.input);
+      const outM = extractMatrix(ex.output);
+      if (inM && outM) result.examples.push({ input: inM, output: outM });
+    }
+    for (const t of tests) {
+      const inM = typeof t.input === 'string' ? extractMatrix(t.input) : t.input;
+      if (inM) result.tests.push({ input: inM, output: null });
+    }
+    console.log('[parser] Marker strategy result:', result.examples.length, 'examples,', result.tests.length, 'tests');
+    if (result.examples.length > 0 || result.tests.length > 0) return result;
+  }
+
+  // === Last fallback: number blocks ===
+  const matrices = findAllMatrices(normalized);
+  if (matrices.length >= 2) {
+    console.log('[parser] Number block fallback: found', matrices.length, 'blocks');
+    const examples = [], tests = [];
+    const pairCount = Math.floor(matrices.length / 2);
+    for (let i = 0; i < pairCount; i++) {
+      examples.push({ input: matrices[i * 2], output: matrices[i * 2 + 1] });
+    }
+    if (matrices.length % 2 === 1) {
+      tests.push({ input: matrices[matrices.length - 1], output: null });
+    }
+    if (examples.length > 0 || tests.length > 0) return { examples, tests };
+  }
+
+  return null;
+}
+
+function extractMatrix(text) {
+  if (!text || !text.trim()) return null;
+  text = text.trim();
+  try {
+    let jsonStr = text.replace(/'/g, '"').replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false');
+    // Match only the FIRST complete 2D array [[...],[...]]
+    const arrMatch = jsonStr.match(/\[\s*\[[\d\s,\[\]]+\]\s*\]/);
+    if (arrMatch) {
+      const parsed = JSON.parse(arrMatch[0]);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed[0])) return parsed.map(row => row.map(Number));
+        return [parsed.map(Number)];
+      }
+    }
+    // Try 1D array
+    const arr1d = jsonStr.match(/\[\s*\d[\d\s,]*\]/);
+    if (arr1d) {
+      const parsed = JSON.parse(arr1d[0]);
+      if (Array.isArray(parsed)) return [parsed.map(Number)];
+    }
+  } catch(e) {}
+
+  const lines = text.split('\n');
+  const matrix = [];
+  for (let line of lines) {
+    line = line.replace(/[\[\](){}|]/g, '').trim();
+    if (!line) continue;
+    if (!/\d/.test(line)) continue;
+    let nums;
+    if (/[,;]/.test(line)) {
+      nums = line.split(/[,;]+/).map(s => s.trim()).filter(s => s !== '').map(Number);
+    } else if (/\s/.test(line.trim())) {
+      nums = line.split(/\s+/).map(s => s.trim()).filter(s => s !== '').map(Number);
+    } else {
+      nums = line.split('').filter(c => /\d/.test(c)).map(Number);
+    }
+    if (nums.length > 0 && nums.every(n => !isNaN(n))) matrix.push(nums);
+  }
+  if (matrix.length === 0) return null;
+  const maxLen = Math.max(...matrix.map(r => r.length));
+  for (let row of matrix) while (row.length < maxLen) row.push(0);
+  return matrix;
+}
+
+// Find all separate JSON-style 2D arrays like [[1,2],[3,4]] in text using bracket counting
+function findAllJsonArrays(text) {
+  const matrices = [];
+  let i = 0;
+  while (i < text.length) {
+    // Find next '[[' pattern (start of a 2D array)
+    const start = text.indexOf('[', i);
+    if (start === -1) break;
+    // Check if it's a 2D array start: [ followed by optional whitespace then [
+    const afterFirst = text.substring(start + 1).search(/\S/);
+    if (afterFirst === -1 || text[start + 1 + afterFirst] !== '[') {
+      i = start + 1;
+      continue;
+    }
+    // Use bracket counting to find the matching close
+    let depth = 0;
+    let end = -1;
+    for (let j = start; j < text.length; j++) {
+      if (text[j] === '[') depth++;
+      else if (text[j] === ']') {
+        depth--;
+        if (depth === 0) { end = j + 1; break; }
+      }
+    }
+    if (end === -1) break;
+    const candidate = text.substring(start, end).replace(/'/g, '"');
+    try {
+      const parsed = JSON.parse(candidate);
+      if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0])) {
+        matrices.push(parsed.map(row => row.map(Number)));
+      }
+    } catch(e) { /* skip invalid */ }
+    i = end;
+  }
+  return matrices;
+}
+
+function findAllMatrices(text) {
+  const matrices = [];
+  const lines = text.split('\n');
+  let currentBlock = [];
+  function flushBlock() {
+    if (currentBlock.length > 0) {
+      const m = extractMatrix(currentBlock.join('\n'));
+      if (m) matrices.push(m);
+      currentBlock = [];
+    }
+  }
+  for (const line of lines) {
+    const stripped = line.replace(/[\[\](){}|]/g, '').trim();
+    const isNumericLine = stripped.length > 0 && /^\d[\d\s,;]*$/.test(stripped);
+    if (isNumericLine) currentBlock.push(line);
+    else flushBlock();
+  }
+  flushBlock();
+  return matrices;
+}
+
+function ensureMatrix(m) {
+  if (!m) return null;
+  if (Array.isArray(m) && Array.isArray(m[0])) return m.map(r => r.map(Number));
+  if (Array.isArray(m)) return [m.map(Number)];
+  return null;
+}
+
+// ==================== RENDERING ====================
+function calcCellSize(rows, cols) {
+  const maxDim = Math.max(rows, cols);
+  if (maxDim <= 5) return 42;
+  if (maxDim <= 10) return 34;
+  if (maxDim <= 15) return 26;
+  if (maxDim <= 20) return 20;
+  if (maxDim <= 30) return 15;
+  return 11;
+}
+
+function makeArrow() {
+  const wrap = document.createElement('div');
+  wrap.className = 'arrow-wrap';
+  wrap.innerHTML = '<svg><use href="#arrow-right"/></svg>';
+  return wrap;
+}
+
+function renderMatrixToElement(matrix, container, editable = false) {
+  if (!matrix || matrix.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-style:italic;padding:16px;">无数据</div>';
+    return;
+  }
+  const rows = matrix.length, cols = matrix[0].length;
+  const size = calcCellSize(rows, cols);
+
+  const grid = document.createElement('div');
+  grid.className = 'matrix-grid';
+  grid.style.gridTemplateColumns = `repeat(${cols}, ${size}px)`;
+  grid.style.gridTemplateRows = `repeat(${rows}, ${size}px)`;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'matrix-cell' + (editable ? ' editable' : '');
+      const val = matrix[r][c];
+      cell.style.backgroundColor = getColor(val);
+      cell.style.width = size + 'px';
+      cell.style.height = size + 'px';
+      if (size >= 18) cell.textContent = val;
+      if (editable) {
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+        cell.addEventListener('click', () => {
+          editorMatrix[r][c] = selectedColor;
+          cell.style.backgroundColor = getColor(selectedColor);
+          cell.textContent = size >= 18 ? selectedColor : '';
+          updateOutputText();
+        });
+        cell.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          editorMatrix[r][c] = 0;
+          cell.style.backgroundColor = getColor(0);
+          cell.textContent = size >= 18 ? '0' : '';
+          updateOutputText();
+        });
+      }
+      grid.appendChild(cell);
+    }
+  }
+  container.innerHTML = '';
+  container.appendChild(grid);
+
+  const info = document.createElement('div');
+  info.className = 'size-tag';
+  info.textContent = `${rows} × ${cols}`;
+  container.appendChild(info);
+}
+
+function renderExamples() {
+  const container = document.getElementById('examplesContainer');
+  const section = document.getElementById('examplesSection');
+  container.innerHTML = '';
+  if (!parsedData || parsedData.examples.length === 0) { section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+
+  parsedData.examples.forEach((ex, idx) => {
+    const pair = document.createElement('div');
+    pair.className = 'example-pair';
+    pair.style.animationDelay = (idx * 0.08) + 's';
+
+    const badge = document.createElement('div');
+    badge.className = 'example-badge';
+    badge.textContent = `EXAMPLE ${idx}`;
+    pair.appendChild(badge);
+
+    const inputBlock = document.createElement('div');
+    inputBlock.className = 'matrix-block';
+    inputBlock.innerHTML = '<div class="matrix-label">Input</div>';
+    const inputGrid = document.createElement('div');
+    renderMatrixToElement(ex.input, inputGrid);
+    inputBlock.appendChild(inputGrid);
+    pair.appendChild(inputBlock);
+
+    pair.appendChild(makeArrow());
+
+    const outputBlock = document.createElement('div');
+    outputBlock.className = 'matrix-block';
+    outputBlock.innerHTML = '<div class="matrix-label">Output</div>';
+    const outputGrid = document.createElement('div');
+    renderMatrixToElement(ex.output, outputGrid);
+    outputBlock.appendChild(outputGrid);
+    pair.appendChild(outputBlock);
+
+    container.appendChild(pair);
+  });
+}
+
+function renderTest() {
+  const container = document.getElementById('testContainer');
+  const section = document.getElementById('testSection');
+  container.innerHTML = '';
+  if (!parsedData || parsedData.tests.length === 0) { section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+
+  parsedData.tests.forEach((test, idx) => {
+    const area = document.createElement('div');
+    area.className = 'test-visual';
+
+    const inputBlock = document.createElement('div');
+    inputBlock.className = 'matrix-block';
+    inputBlock.innerHTML = `<div class="matrix-label">Test Input${parsedData.tests.length > 1 ? ' ' + idx : ''}</div>`;
+    const inputGrid = document.createElement('div');
+    renderMatrixToElement(test.input, inputGrid);
+    inputBlock.appendChild(inputGrid);
+    area.appendChild(inputBlock);
+
+    if (predictions[idx]) {
+      area.appendChild(makeArrow());
+
+      const outputBlock = document.createElement('div');
+      outputBlock.className = 'matrix-block';
+      outputBlock.innerHTML = '<div class="matrix-label">Predicted Output</div>';
+      const outputGrid = document.createElement('div');
+      renderMatrixToElement(predictions[idx], outputGrid);
+      outputBlock.appendChild(outputGrid);
+      area.appendChild(outputBlock);
+    }
+
+    container.appendChild(area);
+  });
+
+  const pred = predictions[0];
+  const testInput = parsedData.tests[0]?.input;
+  if (pred) {
+    currentPrediction = pred;
+    document.getElementById('editRows').value = pred.length;
+    document.getElementById('editCols').value = pred[0].length;
+    editorMatrix = pred.map(r => [...r]);
+  } else if (testInput) {
+    document.getElementById('editRows').value = testInput.length;
+    document.getElementById('editCols').value = testInput[0].length;
+    editorMatrix = testInput.map(r => [...r]);
+  } else {
+    editorMatrix = [[0,0,0],[0,0,0],[0,0,0]];
+  }
+  buildPalette();
+  renderEditor();
+  updateOutputText();
+}
+
+function buildPalette() {
+  const palette = document.getElementById('colorPalette');
+  palette.innerHTML = '<span class="palette-label">画笔:</span>';
+  let allVals = new Set();
+  if (parsedData) {
+    for (const ex of parsedData.examples) {
+      for (const row of (ex.input || [])) for (const v of row) allVals.add(v);
+      for (const row of (ex.output || [])) for (const v of row) allVals.add(v);
+    }
+    for (const t of parsedData.tests) {
+      for (const row of (t.input || [])) for (const v of row) allVals.add(v);
+    }
+  }
+  for (let i = 0; i <= 9; i++) allVals.add(i);
+  const sorted = [...allVals].sort((a, b) => a - b);
+  for (const val of sorted) {
+    const cell = document.createElement('div');
+    cell.className = 'palette-cell' + (val === selectedColor ? ' selected' : '');
+    cell.style.backgroundColor = getColor(val);
+    cell.textContent = val;
+    cell.onclick = () => {
+      selectedColor = val;
+      document.querySelectorAll('.palette-cell').forEach(c => c.classList.remove('selected'));
+      cell.classList.add('selected');
+    };
+    palette.appendChild(cell);
+  }
+}
+
+function renderEditor() {
+  const container = document.getElementById('editorGrid');
+  renderMatrixToElement(editorMatrix, container, true);
+}
+
+function resizeEditor() {
+  const rows = parseInt(document.getElementById('editRows').value) || 3;
+  const cols = parseInt(document.getElementById('editCols').value) || 3;
+  const newMatrix = [];
+  for (let r = 0; r < rows; r++) {
+    const row = [];
+    for (let c = 0; c < cols; c++) row.push(editorMatrix[r]?.[c] ?? 0);
+    newMatrix.push(row);
+  }
+  editorMatrix = newMatrix;
+  renderEditor();
+  updateOutputText();
+}
+
+function clearEditor() {
+  const rows = editorMatrix.length, cols = editorMatrix[0]?.length || 3;
+  editorMatrix = Array.from({ length: rows }, () => Array(cols).fill(0));
+  renderEditor();
+  updateOutputText();
+}
+
+function fillFromPrediction() {
+  if (currentPrediction) {
+    editorMatrix = currentPrediction.map(r => [...r]);
+    document.getElementById('editRows').value = editorMatrix.length;
+    document.getElementById('editCols').value = editorMatrix[0].length;
+    renderEditor();
+    updateOutputText();
+  }
+}
+
+function updateOutputText() {
+  document.getElementById('outputText').value = matrixToString(editorMatrix);
+}
+function matrixToString(m) { return m.map(row => row.join(' ')).join('\n'); }
+function matrixToJSON(m) { return JSON.stringify(m); }
+function copyResult() { navigator.clipboard.writeText(matrixToString(editorMatrix)).then(() => showToast('已复制矩阵文本')); }
+function copyResultJSON() { navigator.clipboard.writeText(matrixToJSON(editorMatrix)).then(() => showToast('已复制 JSON')); }
+
+// ==================== PATTERN ANALYSIS ====================
+function analyzeAndPredict() {
+  const section = document.getElementById('analysisSection');
+  const resultDiv = document.getElementById('analysisResult');
+  resultDiv.innerHTML = '';
+  predictions = [];
+  detectedPatterns = [];
+
+  if (!parsedData || parsedData.examples.length === 0) {
+    section.classList.add('hidden');
+    // Even if no examples, still provide null predictions so test section renders
+    for (const test of (parsedData?.tests || [])) {
+      predictions.push(test.input ? test.input.map(r => [...r]) : null);
+    }
+    return;
+  }
+  section.classList.remove('hidden');
+
+  const examples = parsedData.examples;
+  const infos = [];
+
+  try {
+    infos.push(analyzeSizes(examples));
+    infos.push(analyzeColors(examples));
+
+    const transformResult = tryAllTransformations(examples);
+    if (transformResult) {
+      detectedPatterns.push(transformResult);
+      infos.push(transformResult.description);
+      for (const test of parsedData.tests) {
+        try { predictions.push(transformResult.apply(test.input)); }
+        catch(e) { predictions.push(test.input ? test.input.map(r => [...r]) : null); }
+      }
+    } else {
+      infos.push('未能自动识别出确定的变换规律，请根据可视化手动分析并编辑输出。');
+      for (const test of parsedData.tests) {
+        predictions.push(null);
+      }
+    }
+  } catch(e) {
+    console.error('[analyzeAndPredict] Error:', e);
+    infos.push('分析过程出错，请手动编辑输出。');
+    while (predictions.length < parsedData.tests.length) {
+      predictions.push(null);
+    }
+  }
+
+  for (const info of infos) {
+    const box = document.createElement('div');
+    box.className = 'analysis-item';
+    if (typeof info === 'string') {
+      box.innerHTML = `<div class="desc">${info}</div>`;
+    } else if (info.title) {
+      box.innerHTML = `<div class="title">${info.title}</div><div class="desc">${info.detail}</div>`;
+    }
+    resultDiv.appendChild(box);
+  }
+}
+
+function analyzeSizes(examples) {
+  const sizes = examples.map(ex => ({
+    inR: ex.input.length, inC: ex.input[0]?.length || 0,
+    outR: ex.output.length, outC: ex.output[0]?.length || 0,
+  }));
+  const sameSize = sizes.every(s => s.inR === s.outR && s.inC === s.outC);
+  const allScaled = sizes.length > 0 && sizes.every(s =>
+    s.outR > 0 && s.outC > 0 && s.inR > 0 && s.inC > 0 &&
+    s.outR % s.inR === 0 && s.outC % s.inC === 0 &&
+    s.outR / s.inR === s.outC / s.inC &&
+    s.outR / s.inR === sizes[0].outR / sizes[0].inR
+  );
+  const scaleUp = allScaled && !sameSize ? sizes[0].outR / sizes[0].inR : null;
+  const swapped = sizes.every(s => s.inR === s.outC && s.inC === s.outR) && !sameSize;
+
+  let detail = sizes.map((s, i) =>
+    `示例${i}: Input <strong>${s.inR}×${s.inC}</strong> → Output <strong>${s.outR}×${s.outC}</strong>`
+  ).join('<br>');
+  if (sameSize) detail += '<br>输入输出 <strong>尺寸相同</strong>';
+  else if (scaleUp) detail += `<br>输出是输入的 <strong>${scaleUp}x 放大</strong>`;
+  else if (swapped) detail += '<br>行列数 <strong>交换</strong>（可能是转置）';
+
+  return { title: '尺寸分析', detail };
+}
+
+function analyzeColors(examples) {
+  const details = [];
+  for (let i = 0; i < examples.length; i++) {
+    const inColors = new Set(), outColors = new Set();
+    for (const row of examples[i].input) for (const v of row) inColors.add(v);
+    for (const row of examples[i].output) for (const v of row) outColors.add(v);
+    details.push(`示例${i}: Input 颜色 {${[...inColors].sort().join(',')}} → Output 颜色 {${[...outColors].sort().join(',')}}`);
+  }
+  return { title: '颜色分析', detail: details.join('<br>') };
+}
+
+// ==================== TRANSFORMATIONS ====================
+function matrixEqual(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  for (let r = 0; r < a.length; r++) {
+    if (a[r].length !== b[r].length) return false;
+    for (let c = 0; c < a[r].length; c++) if (a[r][c] !== b[r][c]) return false;
+  }
+  return true;
+}
+
+function rotate90(m) { const R=m.length,C=m[0].length; return Array.from({length:C},(_,c)=>Array.from({length:R},(_,r)=>m[R-1-r][c])); }
+function rotate180(m) { return rotate90(rotate90(m)); }
+function rotate270(m) { return rotate90(rotate90(rotate90(m))); }
+function flipH(m) { return m.map(r=>[...r].reverse()); }
+function flipV(m) { return [...m].reverse().map(r=>[...r]); }
+function transpose(m) { const R=m.length,C=m[0].length; return Array.from({length:C},(_,c)=>Array.from({length:R},(_,r)=>m[r][c])); }
+function identity(m) { return m.map(r=>[...r]); }
+
+function scaleUpMatrix(m, factor) {
+  const out = [];
+  for (let r = 0; r < m.length; r++)
+    for (let fr = 0; fr < factor; fr++) {
+      const row = [];
+      for (let c = 0; c < m[0].length; c++)
+        for (let fc = 0; fc < factor; fc++) row.push(m[r][c]);
+      out.push(row);
+    }
+  return out;
+}
+function scaleDownMatrix(m, factor) {
+  const R=m.length,C=m[0].length;
+  if (R%factor||C%factor) return null;
+  const out=[];
+  for (let r=0;r<R;r+=factor) { const row=[]; for(let c=0;c<C;c+=factor) row.push(m[r][c]); out.push(row); }
+  return out;
+}
+
+function detectColorMap(examples) {
+  const mapping = {};
+  for (const ex of examples) {
+    if (ex.input.length !== ex.output.length) return null;
+    for (let r = 0; r < ex.input.length; r++) {
+      if (ex.input[r].length !== ex.output[r].length) return null;
+      for (let c = 0; c < ex.input[r].length; c++) {
+        const from = ex.input[r][c], to = ex.output[r][c];
+        if (mapping[from] !== undefined && mapping[from] !== to) return null;
+        mapping[from] = to;
+      }
+    }
+  }
+  return mapping;
+}
+
+function applyColorMap(m, mapping) { return m.map(r => r.map(v => mapping[v] !== undefined ? mapping[v] : v)); }
+
+function invertColors(m) {
+  let mx = 0; for (const row of m) for (const v of row) mx = Math.max(mx, v);
+  return m.map(r => r.map(v => mx - v));
+}
+
+function mode(arr) {
+  const counts = {};
+  for (const v of arr) counts[v] = (counts[v]||0)+1;
+  let best=arr[0],bc=0;
+  for (const [k,c] of Object.entries(counts)) if(c>bc){best=Number(k);bc=c;}
+  return best;
+}
+
+// ==================== HELPER UTILITIES ====================
+function detectBackground(m) {
+  const counts = {};
+  for (const row of m) for (const v of row) counts[v] = (counts[v] || 0) + 1;
+  let best = 0, bc = 0;
+  for (const [k, c] of Object.entries(counts)) if (c > bc) { best = Number(k); bc = c; }
+  return best;
+}
+
+function findConnectedComponents(m, bg) {
+  const R = m.length, C = m[0].length;
+  const visited = Array.from({length: R}, () => Array(C).fill(false));
+  const components = [];
+  for (let r = 0; r < R; r++) {
+    for (let c = 0; c < C; c++) {
+      if (visited[r][c] || m[r][c] === bg) continue;
+      const queue = [[r, c]];
+      visited[r][c] = true;
+      const cells = [];
+      const colors = new Set();
+      let minR = r, maxR = r, minC = c, maxC = c;
+      while (queue.length > 0) {
+        const [cr, cc] = queue.shift();
+        cells.push([cr, cc]);
+        colors.add(m[cr][cc]);
+        minR = Math.min(minR, cr); maxR = Math.max(maxR, cr);
+        minC = Math.min(minC, cc); maxC = Math.max(maxC, cc);
+        for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+          const nr = cr + dr, nc = cc + dc;
+          if (nr >= 0 && nr < R && nc >= 0 && nc < C && !visited[nr][nc] && m[nr][nc] !== bg) {
+            visited[nr][nc] = true;
+            queue.push([nr, nc]);
+          }
+        }
+      }
+      components.push({ cells, colors, minR, maxR, minC, maxC });
+    }
+  }
+  return components;
+}
+
+function boundingBox(m, bg) {
+  let minR = Infinity, maxR = -1, minC = Infinity, maxC = -1;
+  for (let r = 0; r < m.length; r++)
+    for (let c = 0; c < m[0].length; c++)
+      if (m[r][c] !== bg) { minR = Math.min(minR, r); maxR = Math.max(maxR, r); minC = Math.min(minC, c); maxC = Math.max(maxC, c); }
+  return maxR === -1 ? null : { minR, maxR, minC, maxC };
+}
+
+function extractSubMatrix(m, r1, r2, c1, c2) {
+  return Array.from({length: r2 - r1 + 1}, (_, r) =>
+    Array.from({length: c2 - c1 + 1}, (_, c) => m[r1 + r][c1 + c]));
+}
+
+function floodFill(m, sr, sc, targetColor, fillColor) {
+  if (targetColor === fillColor) return m.map(r => [...r]);
+  const R = m.length, C = m[0].length;
+  const out = m.map(r => [...r]);
+  const queue = [[sr, sc]];
+  out[sr][sc] = fillColor;
+  while (queue.length > 0) {
+    const [cr, cc] = queue.shift();
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const nr = cr + dr, nc = cc + dc;
+      if (nr >= 0 && nr < R && nc >= 0 && nc < C && out[nr][nc] === targetColor) {
+        out[nr][nc] = fillColor;
+        queue.push([nr, nc]);
+      }
+    }
+  }
+  return out;
+}
+
+function detectDividers(m) {
+  const R = m.length, C = m[0].length;
+  const allColors = new Set();
+  for (const row of m) for (const v of row) allColors.add(v);
+  for (const dc of allColors) {
+    const hLines = [], vLines = [];
+    for (let r = 0; r < R; r++) if (m[r].every(v => v === dc)) hLines.push(r);
+    for (let c = 0; c < C; c++) { let all = true; for (let r = 0; r < R; r++) if (m[r][c] !== dc) { all = false; break; } if (all) vLines.push(c); }
+    if (hLines.length >= 1 && hLines[0] > 0 && hLines[hLines.length-1] < R-1)
+      return { hLines, vLines, divColor: dc };
+    if (vLines.length >= 1 && vLines[0] > 0 && vLines[vLines.length-1] < C-1)
+      return { hLines, vLines, divColor: dc };
+  }
+  return null;
+}
+
+function splitByDividers(m, hLines, vLines) {
+  const R = m.length, C = m[0].length;
+  const rBounds = [];
+  let prev = 0;
+  for (const h of hLines) { if (h > prev) rBounds.push([prev, h - 1]); prev = h + 1; }
+  if (prev < R) rBounds.push([prev, R - 1]);
+  const cBounds = [];
+  prev = 0;
+  for (const v of vLines) { if (v > prev) cBounds.push([prev, v - 1]); prev = v + 1; }
+  if (prev < C) cBounds.push([prev, C - 1]);
+  if (cBounds.length === 0) cBounds.push([0, C - 1]);
+  if (rBounds.length === 0) rBounds.push([0, R - 1]);
+  return rBounds.map(([r1, r2]) => cBounds.map(([c1, c2]) => extractSubMatrix(m, r1, r2, c1, c2)));
+}
+
+function tryAllTransformations(examples) {
+  const geoTransforms = [
+    { name: '恒等变换（输出 = 输入）', fn: identity },
+    { name: '顺时针旋转 90°', fn: rotate90 },
+    { name: '旋转 180°', fn: rotate180 },
+    { name: '逆时针旋转 90°', fn: rotate270 },
+    { name: '水平翻转', fn: flipH },
+    { name: '垂直翻转', fn: flipV },
+    { name: '转置', fn: transpose },
+  ];
+
+  for (const t of geoTransforms) {
+    if (examples.every(ex => matrixEqual(t.fn(ex.input), ex.output))) {
+      return { description: `<strong>${t.name}</strong>`, apply: t.fn };
+    }
+  }
+
+  const cmap = detectColorMap(examples);
+  if (cmap) {
+    const entries = Object.entries(cmap).map(([k,v])=>`${k}→${v}`).join(', ');
+    return { description: `<strong>颜色映射</strong> — ${entries}`, apply: m => applyColorMap(m, cmap) };
+  }
+
+  for (const t of geoTransforms) {
+    if (t.fn === identity) continue;
+    const te = examples.map(ex => ({ input: t.fn(ex.input), output: ex.output }));
+    if (te.every(e => e.input.length === e.output.length && e.input[0]?.length === e.output[0]?.length)) {
+      const cm = detectColorMap(te);
+      if (cm) {
+        const entries = Object.entries(cm).map(([k,v])=>`${k}→${v}`).join(', ');
+        return { description: `<strong>${t.name} + 颜色映射</strong> — ${entries}`, apply: m => applyColorMap(t.fn(m), cm) };
+      }
+    }
+  }
+
+  for (let f = 2; f <= 5; f++) {
+    if (examples.every(ex => matrixEqual(scaleUpMatrix(ex.input, f), ex.output)))
+      return { description: `<strong>${f}x 放大</strong>`, apply: m => scaleUpMatrix(m, f) };
+  }
+  for (let f = 2; f <= 5; f++) {
+    if (examples.every(ex => { const sd=scaleDownMatrix(ex.input,f); return sd && matrixEqual(sd, ex.output); }))
+      return { description: `<strong>1/${f} 缩小</strong>`, apply: m => scaleDownMatrix(m, f) };
+  }
+
+  if (examples.every(ex => matrixEqual(invertColors(ex.input), ex.output)))
+    return { description: `<strong>颜色反转</strong>（max - value）`, apply: invertColors };
+
+  for (const t of geoTransforms) {
+    if (t.fn === identity) continue;
+    if (examples.every(ex => matrixEqual(invertColors(t.fn(ex.input)), ex.output)))
+      return { description: `<strong>${t.name} + 颜色反转</strong>`, apply: m => invertColors(t.fn(m)) };
+  }
+
+  // Row sort ascending
+  if (examples.every(ex => ex.input.length===ex.output.length && ex.input[0]?.length===ex.output[0]?.length &&
+    ex.input.every((row,r) => { const s=[...row].sort((a,b)=>a-b); return s.every((v,c)=>v===ex.output[r][c]); })))
+    return { description: `<strong>每行升序排序</strong>`, apply: m => m.map(r=>[...r].sort((a,b)=>a-b)) };
+
+  // Gravity down
+  if (examples.every(ex => {
+    if(ex.input.length!==ex.output.length||ex.input[0]?.length!==ex.output[0]?.length) return false;
+    const C=ex.input[0].length;
+    for(let c=0;c<C;c++){const col=[];for(let r=0;r<ex.input.length;r++)col.push(ex.input[r][c]);
+      const nz=col.filter(v=>v!==0);const exp=Array(col.length-nz.length).fill(0).concat(nz);
+      for(let r=0;r<exp.length;r++)if(exp[r]!==ex.output[r][c])return false;}return true;
+  }) && !examples.every(ex=>matrixEqual(ex.input,ex.output)))
+    return { description: `<strong>重力下落</strong>（非零元素下沉）`, apply: m => {
+      const R=m.length,C=m[0].length,o=Array.from({length:R},()=>Array(C).fill(0));
+      for(let c=0;c<C;c++){const col=[];for(let r=0;r<R;r++)col.push(m[r][c]);const nz=col.filter(v=>v!==0);
+        const nc=Array(R-nz.length).fill(0).concat(nz);for(let r=0;r<R;r++)o[r][c]=nc[r];}return o;} };
+
+  // Gravity up
+  if (examples.every(ex => {
+    if(ex.input.length!==ex.output.length||ex.input[0]?.length!==ex.output[0]?.length) return false;
+    const C=ex.input[0].length;
+    for(let c=0;c<C;c++){const col=[];for(let r=0;r<ex.input.length;r++)col.push(ex.input[r][c]);
+      const nz=col.filter(v=>v!==0);const exp=nz.concat(Array(col.length-nz.length).fill(0));
+      for(let r=0;r<exp.length;r++)if(exp[r]!==ex.output[r][c])return false;}return true;
+  }) && !examples.every(ex=>matrixEqual(ex.input,ex.output)))
+    return { description: `<strong>重力上浮</strong>（非零元素上浮）`, apply: m => {
+      const R=m.length,C=m[0].length,o=Array.from({length:R},()=>Array(C).fill(0));
+      for(let c=0;c<C;c++){const col=[];for(let r=0;r<R;r++)col.push(m[r][c]);const nz=col.filter(v=>v!==0);
+        const nc=nz.concat(Array(R-nz.length).fill(0));for(let r=0;r<R;r++)o[r][c]=nc[r];}return o;} };
+
+  // Add border
+  if (examples.every(ex => {
+    const iR=ex.input.length,iC=ex.input[0].length,oR=ex.output.length,oC=ex.output[0].length;
+    if(oR!==iR+2||oC!==iC+2)return false;
+    for(let r=0;r<iR;r++)for(let c=0;c<iC;c++)if(ex.output[r+1][c+1]!==ex.input[r][c])return false;
+    return true;
+  })) {
+    const bv=[];for(const ex of examples){const o=ex.output;for(let c=0;c<o[0].length;c++){bv.push(o[0][c]);bv.push(o[o.length-1][c]);}
+      for(let r=0;r<o.length;r++){bv.push(o[r][0]);bv.push(o[r][o[r].length-1]);}}
+    const bc=mode(bv);
+    return { description: `<strong>添加边框</strong>（颜色: ${bc}）`, apply: m => {
+      const R=m.length,C=m[0].length,o=Array.from({length:R+2},()=>Array(C+2).fill(bc));
+      for(let r=0;r<R;r++)for(let c=0;c<C;c++)o[r+1][c+1]=m[r][c];return o;} };
+  }
+
+  // Remove border
+  if (examples.every(ex => {
+    const iR=ex.input.length,iC=ex.input[0].length,oR=ex.output.length,oC=ex.output[0].length;
+    if(iR!==oR+2||iC!==oC+2)return false;
+    for(let r=0;r<oR;r++)for(let c=0;c<oC;c++)if(ex.input[r+1][c+1]!==ex.output[r][c])return false;
+    return true;
+  }))
+    return { description: `<strong>移除边框</strong>`, apply: m => Array.from({length:m.length-2},(_,r)=>Array.from({length:m[0].length-2},(_,c)=>m[r+1][c+1])) };
+
+  // Tile repeat
+  for (let tr=2;tr<=4;tr++) for (let tc=2;tc<=4;tc++) {
+    if (examples.every(ex => {
+      const iR=ex.input.length,iC=ex.input[0].length,oR=ex.output.length,oC=ex.output[0].length;
+      if(oR!==iR*tr||oC!==iC*tc)return false;
+      for(let r=0;r<oR;r++)for(let c=0;c<oC;c++)if(ex.output[r][c]!==ex.input[r%iR][c%iC])return false;
+      return true;
+    }))
+      return { description: `<strong>平铺重复 ${tr}×${tc}</strong>`, apply: m => {
+        const R=m.length,C=m[0].length;
+        return Array.from({length:R*tr},(_,r)=>Array.from({length:C*tc},(_,c)=>m[r%R][c%C]));} };
+  }
+
+  // ==================== NEW PATTERNS ====================
+
+  // Row sort descending
+  if (examples.every(ex => ex.input.length===ex.output.length && ex.input[0]?.length===ex.output[0]?.length &&
+    ex.input.every((row,r) => { const s=[...row].sort((a,b)=>b-a); return s.every((v,c)=>v===ex.output[r][c]); }))
+    && !examples.every(ex=>matrixEqual(ex.input,ex.output)))
+    return { description: `<strong>每行降序排序</strong>`, apply: m => m.map(r=>[...r].sort((a,b)=>b-a)) };
+
+  // Column sort ascending
+  if (examples.every(ex => {
+    const R=ex.input.length,C=ex.input[0]?.length;
+    if(R!==ex.output.length||C!==ex.output[0]?.length) return false;
+    for(let c=0;c<C;c++){const col=[];for(let r=0;r<R;r++)col.push(ex.input[r][c]);col.sort((a,b)=>a-b);for(let r=0;r<R;r++)if(col[r]!==ex.output[r][c])return false;}
+    return true;
+  }) && !examples.every(ex=>matrixEqual(ex.input,ex.output)))
+    return { description: `<strong>每列升序排序</strong>`, apply: m => {
+      const R=m.length,C=m[0].length,out=m.map(r=>[...r]);
+      for(let c=0;c<C;c++){const col=[];for(let r=0;r<R;r++)col.push(m[r][c]);col.sort((a,b)=>a-b);for(let r=0;r<R;r++)out[r][c]=col[r];}return out;}};
+
+  // Column sort descending
+  if (examples.every(ex => {
+    const R=ex.input.length,C=ex.input[0]?.length;
+    if(R!==ex.output.length||C!==ex.output[0]?.length) return false;
+    for(let c=0;c<C;c++){const col=[];for(let r=0;r<R;r++)col.push(ex.input[r][c]);col.sort((a,b)=>b-a);for(let r=0;r<R;r++)if(col[r]!==ex.output[r][c])return false;}
+    return true;
+  }) && !examples.every(ex=>matrixEqual(ex.input,ex.output)))
+    return { description: `<strong>每列降序排序</strong>`, apply: m => {
+      const R=m.length,C=m[0].length,out=m.map(r=>[...r]);
+      for(let c=0;c<C;c++){const col=[];for(let r=0;r<R;r++)col.push(m[r][c]);col.sort((a,b)=>b-a);for(let r=0;r<R;r++)out[r][c]=col[r];}return out;}};
+
+  // Gravity left
+  if (examples.every(ex => {
+    if(ex.input.length!==ex.output.length||ex.input[0]?.length!==ex.output[0]?.length) return false;
+    return ex.input.every((row,r) => {
+      const nz=row.filter(v=>v!==0); const exp=nz.concat(Array(row.length-nz.length).fill(0));
+      return exp.every((v,c)=>v===ex.output[r][c]);
+    });
+  }) && !examples.every(ex=>matrixEqual(ex.input,ex.output)))
+    return { description: `<strong>重力左移</strong>（非零元素左移）`, apply: m => m.map(row => {
+      const nz=row.filter(v=>v!==0); return nz.concat(Array(row.length-nz.length).fill(0)); })};
+
+  // Gravity right
+  if (examples.every(ex => {
+    if(ex.input.length!==ex.output.length||ex.input[0]?.length!==ex.output[0]?.length) return false;
+    return ex.input.every((row,r) => {
+      const nz=row.filter(v=>v!==0); const exp=Array(row.length-nz.length).fill(0).concat(nz);
+      return exp.every((v,c)=>v===ex.output[r][c]);
+    });
+  }) && !examples.every(ex=>matrixEqual(ex.input,ex.output)))
+    return { description: `<strong>重力右移</strong>（非零元素右移）`, apply: m => m.map(row => {
+      const nz=row.filter(v=>v!==0); return Array(row.length-nz.length).fill(0).concat(nz); })};
+
+  // Crop to bounding box
+  { const bg0 = detectBackground(examples[0].input);
+    if (examples.every(ex => {
+      const bg=detectBackground(ex.input); if(bg!==bg0) return false;
+      const bb=boundingBox(ex.input,bg); if(!bb) return false;
+      return matrixEqual(extractSubMatrix(ex.input,bb.minR,bb.maxR,bb.minC,bb.maxC), ex.output);
+    })) return { description: `<strong>裁剪到内容边界框</strong>（背景色: ${bg0}）`, apply: m => {
+      const bb=boundingBox(m,bg0); if(!bb) return m.map(r=>[...r]);
+      return extractSubMatrix(m,bb.minR,bb.maxR,bb.minC,bb.maxC); }};
+  }
+
+  // Fill enclosed regions
+  if (examples.every(ex => {
+    if(ex.input.length!==ex.output.length||ex.input[0]?.length!==ex.output[0]?.length) return false;
+    const bg=detectBackground(ex.input), R=ex.input.length, C=ex.input[0].length;
+    const reachable=Array.from({length:R},()=>Array(C).fill(false));
+    const queue=[];
+    for(let r=0;r<R;r++) for(let c=0;c<C;c++)
+      if((r===0||r===R-1||c===0||c===C-1)&&ex.input[r][c]===bg){reachable[r][c]=true;queue.push([r,c]);}
+    while(queue.length>0){const[cr,cc]=queue.shift();for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
+      const nr=cr+dr,nc=cc+dc;if(nr>=0&&nr<R&&nc>=0&&nc<C&&!reachable[nr][nc]&&ex.input[nr][nc]===bg){reachable[nr][nc]=true;queue.push([nr,nc]);}}}
+    let fillColor=-1, hasEnclosed=false;
+    for(let r=0;r<R;r++) for(let c=0;c<C;c++){
+      if(ex.input[r][c]===bg&&!reachable[r][c]){hasEnclosed=true;if(fillColor===-1)fillColor=ex.output[r][c];else if(ex.output[r][c]!==fillColor)return false;}
+      else if(ex.input[r][c]!==ex.output[r][c]) return false;
+    }
+    return hasEnclosed;
+  })) return { description: `<strong>填充封闭区域</strong>`, apply: m => {
+    const bg=detectBackground(m),R=m.length,C=m[0].length;
+    const reachable=Array.from({length:R},()=>Array(C).fill(false));const queue=[];
+    for(let r=0;r<R;r++) for(let c=0;c<C;c++) if((r===0||r===R-1||c===0||c===C-1)&&m[r][c]===bg){reachable[r][c]=true;queue.push([r,c]);}
+    while(queue.length>0){const[cr,cc]=queue.shift();for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
+      const nr=cr+dr,nc=cc+dc;if(nr>=0&&nr<R&&nc>=0&&nc<C&&!reachable[nr][nc]&&m[nr][nc]===bg){reachable[nr][nc]=true;queue.push([nr,nc]);}}}
+    const adjColors={};
+    for(let r=0;r<R;r++) for(let c=0;c<C;c++) if(m[r][c]===bg&&!reachable[r][c])
+      for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<R&&nc>=0&&nc<C&&m[nr][nc]!==bg) adjColors[m[nr][nc]]=(adjColors[m[nr][nc]]||0)+1;}
+    let fillColor=bg,maxC=0;for(const[k,ct]of Object.entries(adjColors))if(ct>maxC){fillColor=Number(k);maxC=ct;}
+    const out=m.map(r=>[...r]);for(let r=0;r<R;r++) for(let c=0;c<C;c++) if(m[r][c]===bg&&!reachable[r][c]) out[r][c]=fillColor;
+    return out;}};
+
+  // Outline / edge detection
+  if (examples.every(ex => {
+    if(ex.input.length!==ex.output.length||ex.input[0]?.length!==ex.output[0]?.length) return false;
+    const bg=detectBackground(ex.input),R=ex.input.length,C=ex.input[0].length;
+    for(let r=0;r<R;r++) for(let c=0;c<C;c++){
+      if(ex.input[r][c]===bg){if(ex.output[r][c]!==bg) return false;}
+      else{const adjBg=[[-1,0],[1,0],[0,-1],[0,1]].some(([dr,dc])=>{const nr=r+dr,nc=c+dc;return nr<0||nr>=R||nc<0||nc>=C||ex.input[nr][nc]===bg;});
+        if(adjBg){if(ex.output[r][c]!==ex.input[r][c])return false;}else{if(ex.output[r][c]!==bg)return false;}}}
+    return true;
+  }) && !examples.every(ex=>matrixEqual(ex.input,ex.output)))
+    return { description: `<strong>轮廓提取</strong>（仅保留边缘像素）`, apply: m => {
+      const bg=detectBackground(m),R=m.length,C=m[0].length;
+      return Array.from({length:R},(_,r)=>Array.from({length:C},(_,c)=>{
+        if(m[r][c]===bg) return bg;
+        const adjBg=[[-1,0],[1,0],[0,-1],[0,1]].some(([dr,dc])=>{const nr=r+dr,nc=c+dc;return nr<0||nr>=R||nc<0||nc>=C||m[nr][nc]===bg;});
+        return adjBg?m[r][c]:bg;}));}};
+
+  // Horizontal symmetry completion
+  if (examples.every(ex => {
+    if(ex.input.length!==ex.output.length||ex.input[0]?.length!==ex.output[0]?.length) return false;
+    const R=ex.output.length,C=ex.output[0].length,bg=detectBackground(ex.input);
+    for(let r=0;r<R;r++) for(let c=0;c<Math.floor(C/2);c++) if(ex.output[r][c]!==ex.output[r][C-1-c]) return false;
+    for(let r=0;r<R;r++) for(let c=0;c<C;c++) if(ex.input[r][c]!==bg&&ex.output[r][c]!==ex.input[r][c]) return false;
+    return true;
+  }) && !examples.every(ex=>matrixEqual(ex.input,ex.output)))
+    return { description: `<strong>水平对称补全</strong>`, apply: m => {
+      const bg=detectBackground(m),R=m.length,C=m[0].length,out=m.map(r=>[...r]);
+      for(let r=0;r<R;r++) for(let c=0;c<C;c++) if(out[r][c]===bg&&out[r][C-1-c]!==bg) out[r][c]=out[r][C-1-c];
+      return out;}};
+
+  // Vertical symmetry completion
+  if (examples.every(ex => {
+    if(ex.input.length!==ex.output.length||ex.input[0]?.length!==ex.output[0]?.length) return false;
+    const R=ex.output.length,C=ex.output[0].length,bg=detectBackground(ex.input);
+    for(let r=0;r<Math.floor(R/2);r++) for(let c=0;c<C;c++) if(ex.output[r][c]!==ex.output[R-1-r][c]) return false;
+    for(let r=0;r<R;r++) for(let c=0;c<C;c++) if(ex.input[r][c]!==bg&&ex.output[r][c]!==ex.input[r][c]) return false;
+    return true;
+  }) && !examples.every(ex=>matrixEqual(ex.input,ex.output)))
+    return { description: `<strong>垂直对称补全</strong>`, apply: m => {
+      const bg=detectBackground(m),R=m.length,C=m[0].length,out=m.map(r=>[...r]);
+      for(let r=0;r<R;r++) for(let c=0;c<C;c++) if(out[r][c]===bg&&out[R-1-r][c]!==bg) out[r][c]=out[R-1-r][c];
+      return out;}};
+
+  // Denoising (3x3 majority filter)
+  if (examples.every(ex => {
+    if(ex.input.length!==ex.output.length||ex.input[0]?.length!==ex.output[0]?.length) return false;
+    const R=ex.input.length,C=ex.input[0].length;
+    for(let r=0;r<R;r++) for(let c=0;c<C;c++){
+      const counts={};
+      for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+        const nr=Math.max(0,Math.min(R-1,r+dr)),nc=Math.max(0,Math.min(C-1,c+dc));
+        counts[ex.input[nr][nc]]=(counts[ex.input[nr][nc]]||0)+1;}
+      let best=ex.input[r][c],bc=0;for(const[k,ct]of Object.entries(counts))if(ct>bc){best=Number(k);bc=ct;}
+      if(best!==ex.output[r][c]) return false;
+    } return true;
+  }) && !examples.every(ex=>matrixEqual(ex.input,ex.output)))
+    return { description: `<strong>去噪（3×3 众数滤波）</strong>`, apply: m => {
+      const R=m.length,C=m[0].length;
+      return Array.from({length:R},(_,r)=>Array.from({length:C},(_,c)=>{
+        const counts={};for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+          const nr=Math.max(0,Math.min(R-1,r+dr)),nc=Math.max(0,Math.min(C-1,c+dc));
+          counts[m[nr][nc]]=(counts[m[nr][nc]]||0)+1;}
+        let best=m[r][c],bc=0;for(const[k,ct]of Object.entries(counts))if(ct>bc){best=Number(k);bc=ct;}
+        return best;}));}};
+
+  // Sub-grid extraction by dividers
+  { const div0=detectDividers(examples[0].input);
+    if(div0){ const subGrids0=splitByDividers(examples[0].input,div0.hLines,div0.vLines).flat();
+      for(let si=0;si<subGrids0.length;si++){
+        if(examples.every(ex=>{const div=detectDividers(ex.input);if(!div)return false;
+          const subs=splitByDividers(ex.input,div.hLines,div.vLines).flat();
+          return si<subs.length&&matrixEqual(subs[si],ex.output);}))
+          return { description: `<strong>分割提取子网格 #${si}</strong>`, apply: m => {
+            const div=detectDividers(m);if(!div) return m.map(r=>[...r]);
+            const subs=splitByDividers(m,div.hLines,div.vLines).flat();
+            return si<subs.length?subs[si]:m.map(r=>[...r]);}};
+      }
+    }
+  }
+
+  // Sub-grid boolean operations (OR, AND, XOR)
+  { const div0=detectDividers(examples[0].input);
+    if(div0){ const sg0=splitByDividers(examples[0].input,div0.hLines,div0.vLines).flat();
+      if(sg0.length>=2 && sg0.every(sg=>sg.length===sg0[0].length&&sg[0].length===sg0[0][0].length)){
+        const ops=[
+          {name:'OR',fn:(a,b,bg)=>(a!==bg||b!==bg)?(a!==bg?a:b):bg},
+          {name:'AND',fn:(a,b,bg)=>(a!==bg&&b!==bg)?a:bg},
+          {name:'XOR',fn:(a,b,bg)=>((a!==bg)!==(b!==bg))?(a!==bg?a:b):bg}];
+        for(const op of ops){
+          if(examples.every(ex=>{const div=detectDividers(ex.input);if(!div)return false;
+            const subs=splitByDividers(ex.input,div.hLines,div.vLines).flat();if(subs.length<2)return false;
+            const bg=detectBackground(ex.input);let result=subs[0].map(r=>[...r]);
+            for(let s=1;s<subs.length;s++) for(let r=0;r<result.length;r++) for(let c=0;c<result[0].length;c++) result[r][c]=op.fn(result[r][c],subs[s][r][c],bg);
+            return matrixEqual(result,ex.output);}))
+            return { description: `<strong>子网格 ${op.name} 运算</strong>`, apply: m => {
+              const div=detectDividers(m);if(!div) return m.map(r=>[...r]);
+              const subs=splitByDividers(m,div.hLines,div.vLines).flat();const bg=detectBackground(m);
+              let result=subs[0].map(r=>[...r]);
+              for(let s=1;s<subs.length;s++) for(let r=0;r<result.length;r++) for(let c=0;c<result[0].length;c++) result[r][c]=op.fn(result[r][c],subs[s][r][c],bg);
+              return result;}};
+        }
+      }
+    }
+  }
+
+  // Keep largest connected component
+  { const bg0=detectBackground(examples[0].input);
+    if(examples.every(ex=>{const bg=detectBackground(ex.input);if(bg!==bg0)return false;
+      const comps=findConnectedComponents(ex.input,bg);if(comps.length===0)return false;
+      const largest=comps.reduce((a,b)=>a.cells.length>=b.cells.length?a:b);
+      return matrixEqual(extractSubMatrix(ex.input,largest.minR,largest.maxR,largest.minC,largest.maxC),ex.output);}))
+      return { description: `<strong>提取最大连通区域</strong>`, apply: m => {
+        const bg=detectBackground(m);const comps=findConnectedComponents(m,bg);if(comps.length===0) return m.map(r=>[...r]);
+        const largest=comps.reduce((a,b)=>a.cells.length>=b.cells.length?a:b);
+        return extractSubMatrix(m,largest.minR,largest.maxR,largest.minC,largest.maxC);}};
+    // Keep smallest
+    if(examples.every(ex=>{const bg=detectBackground(ex.input);if(bg!==bg0)return false;
+      const comps=findConnectedComponents(ex.input,bg);if(comps.length<2)return false;
+      const smallest=comps.reduce((a,b)=>a.cells.length<=b.cells.length?a:b);
+      return matrixEqual(extractSubMatrix(ex.input,smallest.minR,smallest.maxR,smallest.minC,smallest.maxC),ex.output);}))
+      return { description: `<strong>提取最小连通区域</strong>`, apply: m => {
+        const bg=detectBackground(m);const comps=findConnectedComponents(m,bg);if(comps.length===0) return m.map(r=>[...r]);
+        const smallest=comps.reduce((a,b)=>a.cells.length<=b.cells.length?a:b);
+        return extractSubMatrix(m,smallest.minR,smallest.maxR,smallest.minC,smallest.maxC);}};
+  }
+
+  return null;
+}
+
+// ==================== SAMPLE ====================
+function loadSample() {
+  document.getElementById('puzzleInput').value = `Example 0:
+Input:
+0 0 0 0 0
+0 1 1 0 0
+0 1 0 0 0
+0 0 0 2 0
+0 0 0 0 0
+Output:
+0 0 0 0 0
+0 0 1 1 0
+0 0 0 1 0
+0 2 0 0 0
+0 0 0 0 0
+
+Example 1:
+Input:
+0 0 0 3 0
+0 0 0 0 0
+0 4 0 0 0
+0 0 0 0 0
+Output:
+0 3 0 0 0
+0 0 0 0 0
+0 0 0 4 0
+0 0 0 0 0
+
+Test:
+Input:
+0 0 5 0 0 0
+0 0 0 0 0 0
+0 0 0 0 6 0
+0 0 0 0 0 0`;
+  showToast('已加载示例');
+}
+
+function clearAll() {
+  document.getElementById('puzzleInput').value = '';
+  document.getElementById('examplesSection').classList.add('hidden');
+  document.getElementById('analysisSection').classList.add('hidden');
+  document.getElementById('testSection').classList.add('hidden');
+}
+
+// ==================== TOAST ====================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ==================== INIT ====================
+window.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); solve(); }
+});
+</script>
+</body>
+</html>
