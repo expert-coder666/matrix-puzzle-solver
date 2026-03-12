@@ -668,10 +668,17 @@ function extractMatrix(text) {
         return [parsed.map(Number)];
       }
     }
-    // Try 1D array
-    const arr1d = jsonStr.match(/\[\s*\d[\d\s,]*\]/);
-    if (arr1d) {
-      const parsed = JSON.parse(arr1d[0]);
+    // Try multiple 1D arrays as rows of a 2D matrix
+    const allRows = jsonStr.match(/\[\s*\d[\d\s,]*\]/g);
+    if (allRows && allRows.length > 1) {
+      try {
+        const matrix = allRows.map(r => JSON.parse(r).map(Number));
+        if (matrix.every(r => Array.isArray(r) && r.length > 0)) return matrix;
+      } catch(e2) {}
+    }
+    // Try single 1D array
+    if (allRows && allRows.length === 1) {
+      const parsed = JSON.parse(allRows[0]);
       if (Array.isArray(parsed)) return [parsed.map(Number)];
     }
   } catch(e) {}
